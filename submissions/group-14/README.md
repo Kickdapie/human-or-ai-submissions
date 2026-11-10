@@ -117,6 +117,23 @@ Ablation with the same hyperparameters: stylometric features only 0.9977, LSA on
 
 Results are also saved to `results_gbdt.json`.
 
+## Models: Linear SVM and logistic regression on v2 TF-IDF
+
+```bash
+python train_linear_v2.py --train data/train.csv --unlabeled data/unlabeled.csv --test data/test.csv
+```
+
+Same `LinearSVC` and `LogisticRegression` settings, C grids and validation protocol as `train_svm.py` and `train_logreg.py` (both unchanged). The only change is the normalizer, `normalize_text_v2`. The TF-IDF is built once and shared by both models. Writes `results_{svm,logreg}_v2.json` and `submission_{svm,logreg}_v2.csv`.
+
+| Model | Preprocessing | C | 5-fold CV AUROC | Train AUROC | Val. AUROC | Train time |
+|---|---|---|---|---|---|---|
+| Linear SVM | v1 | 1 | 0.9916 | 1.0000 | 0.9941 | 2.1 s fit (171 s incl. TF-IDF) |
+| Linear SVM | v2 | 3 | 0.9956 | 1.0000 | 0.9964 | 1.3 s fit (53 s incl. TF-IDF) |
+| Logistic regression | v1 | 16 | 0.9910 | 1.0000 | 0.9938 | 10.1 s fit (192 s incl. TF-IDF) |
+| Logistic regression | v2 | 16 | 0.9953 | 1.0000 | 0.9965 | 5.1 s fit (56 s incl. TF-IDF) |
+
+The v1 rows are from `results_svm.json` and `results_logreg.json`, and their times are as recorded there. Rerun on the machine used for the v2 rows, the v1 models take 1.4 s (SVM) and 5.8 s (logistic regression) to fit and 54 s to build the TF-IDF, so the two normalizers cost the same.
+
 ## Seeds
 
 - Global seed: `20261023` (validation split, CV folds, LinearSVC, TruncatedSVD, gradient boosting).
