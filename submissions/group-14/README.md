@@ -153,10 +153,42 @@ Trains the GBDT with the `results_gbdt.json` hyperparameters on 500 / 1,000 / 2,
 
 ![Learning curve](learning_curve.png)
 
+## Learning from unlabeled data (GBDT)
+
+```bash
+python unlabeled_experiment.py --train data/train.csv --unlabeled data/unlabeled.csv
+```
+
+Three arms with the `results_gbdt.json` hyperparameters, each trained with 5 seeds and scored on the fixed validation set. In the pseudo-label arm, the feature-learning model scores `unlabeled.csv`; rows with P(AI) ≥ 0.99 or ≤ 0.01 get that label and are added to the 8,000 training rows before refitting. The thresholds are fixed in advance, and the validation rows are never used to fit the TF-IDF/SVD or the teacher.
+
+| Arm | TF-IDF/SVD fit on | Labeled rows | Val. AUROC |
+|---|---|---|---|
+| Supervised only | training text | 8,000 | 0.9977 ± 0.0001 |
+| Feature learning (`train_gbdt.py`) | training + unlabeled text | 8,000 | 0.9979 ± 0.0004 |
+| Feature learning + pseudo-labels | training + unlabeled text | 8,000 + ~2,710 pseudo | 0.9979 ± 0.0002 |
+
+The differences are within seed noise. About 2,710 of the 3,000 unlabeled rows pass the thresholds (1,336 AI, 1,377 human); 75% of the pseudo-labeled AI rows contain a blank line, against 12% of the rejected rows. Under the same rule on the validation set, about 8 of 1,870 confident predictions are wrong, 7 of them AI passages called human. Results are saved to `results_unlabeled.json`.
+
+## Blank-line augmentation (GBDT)
+
+```bash
+python blank_line_augment.py --train data/train.csv --unlabeled data/unlabeled.csv --test data/test.csv --submission submission_gbdt_aug.csv
+```
+
+Tests whether the GBDT depends too much on blank lines. The augmented model adds one copy of every training passage that contains a blank line, with its blank lines collapsed to single line breaks (2,677 copies, 2,659 AI). Features, TF-IDF/SVD and hyperparameters are the same as the baseline. Both are trained with 5 seeds and scored on the validation set as given, on the validation set with all blank lines collapsed ("stripped"), and on a hard slice (the 344 AI passages without a blank line vs. all 1,000 human passages).
+
+| Model | Train rows | Val. AUROC | Stripped val. AUROC | Hard-slice AUROC | FN / FP at 0.5 | Trees | Fit time |
+|---|---|---|---|---|---|---|---|
+| Baseline | 8,000 | 0.9979 ± 0.0004 | 0.9861 ± 0.0015 | 0.9943 ± 0.0013 | 25 / 5 | 154 | 1.5 s |
+| Augmented | 10,677 | 0.9988 ± 0.0001 | 0.9973 ± 0.0001 | 0.9968 ± 0.0002 | 13 / 10 | 280 | 2.8 s |
+
+Results are saved to `results_blank_line_augment.json`. With `--test`, the augmented model is refit on all 10,000 labeled rows plus their stripped copies and written to `--submission`; add `--repeats 0` to skip the evaluation and only write the submission.
+
 ## Seeds
 
 - Global seed: `20261023` (validation split, CV folds, LinearSVC, TruncatedSVD, gradient boosting).
 - Learning curve: subsample seeds `20261023`–`20261027`.
+- Unlabeled-data and blank-line-augmentation experiments: GBDT seeds `20261023`–`20261027` (mean ± std reported).
 
 ## AI assistance
 
