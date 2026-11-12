@@ -134,9 +134,29 @@ Same `LinearSVC` and `LogisticRegression` settings, C grids and validation proto
 
 The v1 rows are from `results_svm.json` and `results_logreg.json`, and their times are as recorded there. Rerun on the machine used for the v2 rows, the v1 models take 1.4 s (SVM) and 5.8 s (logistic regression) to fit and 54 s to build the TF-IDF, so the two normalizers cost the same.
 
+## Effect of training-set size (GBDT)
+
+```bash
+python learning_curve.py --train data/train.csv --unlabeled data/unlabeled.csv
+python plot_learning_curve.py --results results_learning_curve.json --out learning_curve.png
+```
+
+Trains the GBDT with the `results_gbdt.json` hyperparameters on 500 / 1,000 / 2,000 / 5,000 / 8,000 rows sampled from the training partition (stratified, nested across sizes, 5 repeats with seeds `20261023`–`20261027`) and scores the fixed 2,000-row validation set. The stylometric + LSA features are built once from the 8,000 training texts + `unlabeled.csv` (no labels), so only the number of labeled rows changes.
+
+| Training rows | Train AUROC | Val. AUROC |
+|---|---|---|
+| 500 | 0.9993 ± 0.0013 | 0.9901 ± 0.0023 |
+| 1,000 | 0.9989 ± 0.0004 | 0.9925 ± 0.0009 |
+| 2,000 | 0.9997 ± 0.0005 | 0.9953 ± 0.0009 |
+| 5,000 | 0.9998 ± 0.0001 | 0.9969 ± 0.0004 |
+| 8,000 | 1.0000 ± 0.0000 | 0.9979 ± 0.0002 |
+
+![Learning curve](learning_curve.png)
+
 ## Seeds
 
 - Global seed: `20261023` (validation split, CV folds, LinearSVC, TruncatedSVD, gradient boosting).
+- Learning curve: subsample seeds `20261023`–`20261027`.
 
 ## AI assistance
 
